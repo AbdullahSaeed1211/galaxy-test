@@ -151,7 +151,7 @@ export function UploadSection() {
         throw new Error(error.error || 'Failed to process video');
       }
 
-      const data = await response.json();
+      // const data = await response.json();
       
       // Redirect to history page after successful processing start
       window.location.href = '/history';
@@ -176,7 +176,7 @@ export function UploadSection() {
       <section className="py-16 bg-gray-50" id="upload">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
-            <h2 className="text-4xl font-bold text-center mb-8">Transform Your Video</h2>
+            {/* <h2 className="text-4xl font-bold text-center mb-8">Transform Your Video</h2> */}
             
             <div className="grid md:grid-cols-2 gap-8">
               {/* Left Column - Upload and Parameters */}

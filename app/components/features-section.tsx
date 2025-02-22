@@ -13,7 +13,7 @@ export function FeaturesSection() {
   ]
 
   return (
-    <section className="py-12 md:py-16">
+    <section className="py-12 md:py-16 mx-auto max-w-6xl">
     <div className="container px-4 md:px-6">
       <h2 className="text-3xl font-bold tracking-tight">Why Choose Our AI Video Transformer?</h2>
       <p className="mt-4 text-lg text-muted-foreground">

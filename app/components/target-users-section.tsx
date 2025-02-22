@@ -47,7 +47,7 @@ export function TargetUsersSection() {
   ]
 
   return (
-    <section className="py-12 md:py-16">
+    <section className="py-12 md:py-16 mx-auto max-w-6xl">  
       <div className="container px-4 md:px-6">
         <h2 className="text-center text-3xl font-bold tracking-tight">
           Who Can Benefit from Our AI Video-to-Video Transformation?

@@ -23,7 +23,7 @@ export function FaqSection() {
   ]
 
   return (
-    <section className="py-12 md:py-16">
+    <section className="py-12 md:py-16 mx-auto max-w-6xl">  
       <div className="container px-4 md:px-6">
         <h2 className="text-3xl font-bold tracking-tight">
         Frequently Asked Questions About Our AI Video Transformer        </h2>
