@@ -17,7 +17,7 @@ fal.config({
   credentials: process.env.FAL_API_KEY
 });
 
-export const maxDuration = 600; // This function can run for a maximu
+export const maxDuration = 60; // This function can run for a maximu
 
 export async function POST(req: NextRequest) {
   try {
