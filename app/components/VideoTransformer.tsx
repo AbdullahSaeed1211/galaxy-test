@@ -5,7 +5,6 @@ import { FileUploaderRegular } from '@uploadcare/react-uploader/next';
 import '@uploadcare/react-uploader/core.css';
 import { validateVideoFile } from '@/lib/utils/video';
 import { toast } from 'react-hot-toast';
-import { config } from '@/lib/config';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 
@@ -30,7 +29,7 @@ export function VideoTransformer({ onTransformationStart }: VideoTransformerProp
       const fileInfoResponse = await fetch(`https://api.uploadcare.com/info/${info.uuid}/`, {
         headers: {
           'Accept': 'application/json',
-          'Authorization': `Uploadcare.Simple ${config.uploadcare.publicKey}:${config.uploadcare.secretKey}`
+          'Authorization': `Uploadcare.Simple ${process.env.NEXT_PUBLIC_UPLOADCARE_PUBLIC_KEY}`
         }
       });
 
@@ -116,7 +115,7 @@ export function VideoTransformer({ onTransformationStart }: VideoTransformerProp
           Upload Video
         </label>
         <FileUploaderRegular
-          pubkey={config.uploadcare.publicKey}
+          pubkey={process.env.NEXT_PUBLIC_UPLOADCARE_PUBLIC_KEY}
           onChange={handleUploadComplete}
           onFileUploadFailed={handleUploadFailed}
           maxLocalFileSizeBytes={100 * 1024 * 1024} // 100MB max
