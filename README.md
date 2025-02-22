@@ -24,6 +24,7 @@ A powerful AI-powered video transformation tool built with Next.js that uses the
 - **Security**: 
   - Authentication with Clerk
   - Secure file handling with Cloudinary
+  - Input validation
   - Environment variable validation
 
 ### User Experience
@@ -148,6 +149,7 @@ Before deploying to production, ensure:
    - [ ] Authentication is properly configured
    - [ ] File upload validation is in place
    - [ ] API endpoints are secured
+   - [ ] CORS policies are configured
 
 3. **Error Handling**
    - [ ] Error boundaries are implemented
