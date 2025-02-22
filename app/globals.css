@@ -151,3 +151,54 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Uploadcare Uploader Styles */
+.uploadcare--widget__button {
+  background: white !important;
+  border-radius: 0.5rem !important;
+  color: white !important;
+  padding: 0.75rem 1rem !important;
+  font-weight: 500 !important;
+  transition: opacity 0.2s !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+.uploadcare--widget__button:hover {
+  opacity: 0.9 !important;
+}
+
+.uploadcare--widget__button_type_open {
+  margin: 0 auto !important;
+}
+
+.uploadcare--widget__button_type_open::before {
+  content: "↑" !important;
+  font-size: 1.2em !important;
+}
+
+.uploadcare--tab__content {
+  background: white !important;
+}
+
+.uploadcare--widget__text {
+  font-size: 0.875rem !important;
+  line-height: 1.25rem !important;
+}
+
+.uploadcare--powered-by {
+  display: none !important;
+}
+
+.uploadcare--widget {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+}
+
+.uploadcare--widget__button-container {
+  display: flex !important;
+  justify-content: center !important;
+  width: auto !important;
+}
