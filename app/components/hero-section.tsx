@@ -1,6 +1,6 @@
 export function HeroSection() {
   return (
-    <section className="py-20 text-center">
+    <section className="py-10 text-center">
       <div className="container px-4 md:px-6">
         <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
         AI Video-to-Video Transformation

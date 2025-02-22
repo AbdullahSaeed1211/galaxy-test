@@ -1,21 +1,27 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Video, ChevronDown, ChevronUp, RefreshCw } from "lucide-react"
-import { Button } from "./ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
-import { FileUploaderRegular } from '@uploadcare/react-uploader/next'
-import '@uploadcare/react-uploader/core.css'
-import { toast } from 'react-hot-toast'
-import { config } from '@/lib/config'
-import { Switch } from './ui/switch'
-import { Input } from './ui/input'
-import Link from 'next/link'
+import { useState } from "react";
+import { Video, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
+import { Button } from "./ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { FileUploaderRegular } from "@uploadcare/react-uploader/next";
+import "@uploadcare/react-uploader/core.css";
+import { toast } from "react-hot-toast";
+import { config } from "@/lib/config";
+import { Switch } from "./ui/switch";
+import { Input } from "./ui/input";
+import Link from "next/link";
 
 // Custom styles for Uploadcare uploader
 const uploaderStyles = `
   .uploadcare--widget__button {
-    background: #1a1a1a !important;
+    background: white !important;
     border-radius: 0.5rem !important;
     color: white !important;
     padding: 0.75rem 1rem !important;
@@ -63,19 +69,19 @@ interface TransformationParams {
   prompt: string;
   num_inference_steps: number;
   strength: number;
-  aspect_ratio: '16:9' | '9:16';
-  resolution: '480p' | '580p' | '720p';
+  aspect_ratio: "16:9" | "9:16";
+  resolution: "480p" | "580p" | "720p";
   num_frames: 85 | 129;
   pro_mode: boolean;
   enable_safety_checker: boolean;
 }
 
 const defaultParams: TransformationParams = {
-  prompt: '',
+  prompt: "",
   num_inference_steps: 30,
   strength: 0.75,
-  aspect_ratio: '16:9',
-  resolution: '720p',
+  aspect_ratio: "16:9",
+  resolution: "720p",
   num_frames: 129,
   pro_mode: false,
   enable_safety_checker: true,
@@ -87,44 +93,58 @@ export function UploadSection() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [uploadInfo, setUploadInfo] = useState<{ uuid: string; cdnUrl?: string } | null>(null);
+  const [uploadInfo, setUploadInfo] = useState<{
+    uuid: string;
+    cdnUrl?: string;
+  } | null>(null);
 
-  const handleUploadComplete = async (event: { successEntries: Array<{ uuid: string; cdnUrl?: string }> }) => {
+  const handleUploadComplete = async (event: {
+    successEntries: Array<{ uuid: string; cdnUrl?: string }>;
+  }) => {
     try {
       setError(null);
-      
+
       const successFiles = event.successEntries;
       if (!successFiles?.length) {
-        throw new Error('No file uploaded');
+        return; // Silent return for no files, don't show error
       }
 
       const info = successFiles[0];
       if (!info.uuid) {
-        throw new Error('Upload failed');
+        return; // Silent return for no UUID, don't show error
       }
 
       // Get the CDN URL, either directly or construct it from UUID
       const videoUrl = info.cdnUrl || `https://ucarecdn.com/${info.uuid}/`;
-      
+
       // Store upload info for later transformation
       setUploadInfo(info);
       // Set preview URL immediately
       setPreviewUrl(videoUrl);
-      toast.success('Video uploaded successfully');
+
+      // Only show success toast when everything is complete
+      toast.success("Video uploaded successfully");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-      toast.error(err instanceof Error ? err.message : 'An error occurred');
+      // Only show error toast for actual errors, not during normal upload process
+      if (
+        err instanceof Error &&
+        !err.message.includes("No file uploaded") &&
+        !err.message.includes("Upload failed")
+      ) {
+        setError(err.message);
+        toast.error(err.message);
+      }
     }
   };
 
   const handleTransform = async () => {
     if (!uploadInfo) {
-      toast.error('Please upload a video first');
+      toast.error("Please upload a video first");
       return;
     }
 
     if (!params.prompt?.trim()) {
-      toast.error('Please enter a prompt for the transformation');
+      toast.error("Please enter a prompt for the transformation");
       return;
     }
 
@@ -132,12 +152,13 @@ export function UploadSection() {
       setProcessing(true);
       setError(null);
 
-      const videoUrl = uploadInfo.cdnUrl || `https://ucarecdn.com/${uploadInfo.uuid}/`;
-      
-      const response = await fetch('/api/video/process', {
-        method: 'POST',
+      const videoUrl =
+        uploadInfo.cdnUrl || `https://ucarecdn.com/${uploadInfo.uuid}/`;
+
+      const response = await fetch("/api/video/process", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           sourceVideoUrl: videoUrl,
@@ -148,36 +169,40 @@ export function UploadSection() {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to process video');
+        throw new Error(error.error || "Failed to process video");
       }
 
       // const data = await response.json();
-      
+
       // Redirect to history page after successful processing start
-      window.location.href = '/history';
-      
-      toast.success('Video processing started! Redirecting to history...');
+      window.location.href = "/history";
+
+      toast.success("Video processing started! Redirecting to history...");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-      toast.error(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : "An error occurred");
+      toast.error(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setProcessing(false);
     }
   };
 
-  const handleUploadFailed = (error: { errors: Array<{ message: string }> }) => {
-    const errorMessage = error.errors[0]?.message || 'Upload failed';
+  const handleUploadFailed = (error: {
+    errors: Array<{ message: string }>;
+  }) => {
+    const errorMessage = error.errors[0]?.message || "Upload failed";
     toast.error(errorMessage);
   };
 
   return (
     <>
-      <style jsx global>{uploaderStyles}</style>
-      <section className="py-16 bg-gray-50" id="upload">
+      <style jsx global>
+        {uploaderStyles}
+      </style>
+      <section className="py-16 bg-white" id="upload">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             {/* <h2 className="text-4xl font-bold text-center mb-8">Transform Your Video</h2> */}
-            
+
             <div className="grid md:grid-cols-2 gap-8">
               {/* Left Column - Upload and Parameters */}
               <div className="bg-white rounded-lg shadow-sm p-6">
@@ -188,13 +213,14 @@ export function UploadSection() {
                     </div>
                   )}
 
-                  <div className="border rounded-lg p-8 border-dashed">
+                  <div className="border rounded-lg p-8 border-dashed flex flex-col items-center justify-center">
                     <FileUploaderRegular
                       pubkey={config.uploadcare.publicKey}
                       onChange={handleUploadComplete}
                       onFileUploadFailed={handleUploadFailed}
                       maxLocalFileSizeBytes={MAX_VIDEO_SIZE}
-                      sourceList={['local', 'camera', 'url'].join(', ')}
+                      multiple={false}
+                      sourceList={["local", "camera", "url"].join(", ")}
                       className="uc-video-uploader"
                       accept="video/*"
                     />
@@ -217,37 +243,45 @@ export function UploadSection() {
                           setError(null); // Clear error when typing
                         }}
                         placeholder="Describe the style transformation..."
-                        className={`w-full ${error && !params.prompt?.trim() ? 'border-red-300' : ''}`}
+                        className={`w-full ${
+                          error && !params.prompt?.trim()
+                            ? "border-red-300"
+                            : ""
+                        }`}
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2">Resolution</label>
+                      <label className="block text-sm font-medium mb-2">
+                        Resolution
+                      </label>
                       <Select
                         value={params.resolution}
-                        onValueChange={(value: '480p' | '580p' | '720p') =>
+                        onValueChange={(value: "480p" | "580p" | "720p") =>
                           setParams({ ...params, resolution: value })
-                        }
-                      >
+                        }>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="480p">480p (Faster)</SelectItem>
                           <SelectItem value="580p">580p (Balanced)</SelectItem>
-                          <SelectItem value="720p">720p (Higher Quality)</SelectItem>
+                          <SelectItem value="720p">
+                            720p (Higher Quality)
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2">Aspect Ratio</label>
+                      <label className="block text-sm font-medium mb-2">
+                        Aspect Ratio
+                      </label>
                       <Select
                         value={params.aspect_ratio}
-                        onValueChange={(value: '16:9' | '9:16') =>
+                        onValueChange={(value: "16:9" | "9:16") =>
                           setParams({ ...params, aspect_ratio: value })
-                        }
-                      >
+                        }>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -261,8 +295,7 @@ export function UploadSection() {
                     <Button
                       onClick={() => setShowAdvanced(!showAdvanced)}
                       variant="outline"
-                      className="w-full flex items-center justify-center gap-2"
-                    >
+                      className="w-full flex items-center justify-center gap-2">
                       Advanced Settings
                       {showAdvanced ? (
                         <ChevronUp className="h-4 w-4" />
@@ -274,19 +307,27 @@ export function UploadSection() {
                     {showAdvanced && (
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-sm font-medium mb-2">Number of Frames</label>
+                          <label className="block text-sm font-medium mb-2">
+                            Number of Frames
+                          </label>
                           <Select
                             value={params.num_frames.toString()}
                             onValueChange={(value) =>
-                              setParams({ ...params, num_frames: parseInt(value) as 85 | 129 })
-                            }
-                          >
+                              setParams({
+                                ...params,
+                                num_frames: parseInt(value) as 85 | 129,
+                              })
+                            }>
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="85">85 frames (Faster)</SelectItem>
-                              <SelectItem value="129">129 frames (Better Quality)</SelectItem>
+                              <SelectItem value="85">
+                                85 frames (Faster)
+                              </SelectItem>
+                              <SelectItem value="129">
+                                129 frames (Better Quality)
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -309,13 +350,15 @@ export function UploadSection() {
                             className="w-full"
                           />
                           <p className="text-xs text-gray-500 mt-1">
-                            Range: 10-50. Higher values = better quality but slower
+                            Range: 10-50. Higher values = better quality but
+                            slower
                           </p>
                         </div>
 
                         <div>
                           <label className="block text-sm font-medium mb-2">
-                            Transformation Strength: {Math.round(params.strength * 100)}%
+                            Transformation Strength:{" "}
+                            {Math.round(params.strength * 100)}%
                           </label>
                           <Input
                             type="number"
@@ -337,7 +380,9 @@ export function UploadSection() {
 
                         <div className="flex items-center justify-between">
                           <div>
-                            <label className="block text-sm font-medium">Pro Mode</label>
+                            <label className="block text-sm font-medium">
+                              Pro Mode
+                            </label>
                             <p className="text-xs text-gray-500">
                               55 steps, higher quality, 2x cost
                             </p>
@@ -352,7 +397,9 @@ export function UploadSection() {
 
                         <div className="flex items-center justify-between">
                           <div>
-                            <label className="block text-sm font-medium">Safety Checker</label>
+                            <label className="block text-sm font-medium">
+                              Safety Checker
+                            </label>
                             <p className="text-xs text-gray-500">
                               Filter inappropriate content
                             </p>
@@ -360,7 +407,10 @@ export function UploadSection() {
                           <Switch
                             checked={params.enable_safety_checker}
                             onCheckedChange={(checked) =>
-                              setParams({ ...params, enable_safety_checker: checked })
+                              setParams({
+                                ...params,
+                                enable_safety_checker: checked,
+                              })
                             }
                           />
                         </div>
@@ -370,20 +420,21 @@ export function UploadSection() {
                     <Button
                       onClick={() => {
                         if (!uploadInfo) {
-                          toast.error('Please upload a video first');
+                          toast.error("Please upload a video first");
                           return;
                         }
                         if (!params.prompt?.trim()) {
-                          setError('Please enter a prompt for the transformation');
+                          setError(
+                            "Please enter a prompt for the transformation"
+                          );
                           return;
                         }
                         handleTransform();
                       }}
                       disabled={processing || !uploadInfo}
-                      className="w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium py-3 rounded-md flex items-center justify-center gap-2"
-                    >
+                      className="w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-medium py-3 rounded-md flex items-center justify-center gap-2">
                       <Video className="w-5 h-5" />
-                      {processing ? 'Processing...' : 'Transform Video'}
+                      {processing ? "Processing..." : "Transform Video"}
                     </Button>
 
                     {processing && (
@@ -393,13 +444,13 @@ export function UploadSection() {
                             Your video is being processed
                           </p>
                           <p className="text-sm text-purple-600">
-                            This typically takes 3-5 minutes. You can check the status in your history.
+                            This typically takes 3-5 minutes. You can check the
+                            status in your history.
                           </p>
                         </div>
                         <Link
                           href="/history"
-                          className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-[#8B5CF6] hover:text-[#7C3AED] bg-white border border-[#8B5CF6] rounded-md hover:bg-purple-50 transition-colors"
-                        >
+                          className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-[#8B5CF6] hover:text-[#7C3AED] bg-white border border-[#8B5CF6] rounded-md hover:bg-purple-50 transition-colors">
                           <RefreshCw className="w-4 h-4" />
                           View Status in History
                         </Link>
@@ -436,7 +487,9 @@ export function UploadSection() {
                 ) : (
                   <div className="aspect-video rounded-lg border-2 border-dashed border-gray-200 flex flex-col items-center justify-center p-6 text-center">
                     <Video className="h-12 w-12 text-gray-400 mb-4" />
-                    <h4 className="text-lg font-medium text-gray-900">Ready to Process</h4>
+                    <h4 className="text-lg font-medium text-gray-900">
+                      Ready to Process
+                    </h4>
                     <p className="mt-2 text-sm text-gray-500">
                       Upload a video to begin transformation
                     </p>
@@ -448,6 +501,5 @@ export function UploadSection() {
         </div>
       </section>
     </>
-  )
+  );
 }
-

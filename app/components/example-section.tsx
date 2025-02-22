@@ -1,6 +1,14 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+
 export function ExampleSection() {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   return (
     <section className="py-16 bg-white" id="examples">
       <div className="container mx-auto px-4">
@@ -12,24 +20,28 @@ export function ExampleSection() {
             <div>
               <h4 className="text-lg font-medium mb-4">Original Video</h4>
               <div className="aspect-video rounded-lg overflow-hidden bg-black">
-                <video
-                  src="/examples/original1.mp4"
-                  controls
-                  className="w-full h-full"
-                  preload="metadata"
-                />
+                {isClient && (
+                  <video
+                    src="/examples/original1.mp4"
+                    controls
+                    className="w-full h-full"
+                    preload="metadata"
+                  />
+                )}
               </div>
             </div>
 
             <div>
               <h4 className="text-lg font-medium mb-4">Transformed Video</h4>
               <div className="aspect-video rounded-lg overflow-hidden bg-black">
-                <video
-                  src="/examples/transformed1.mp4"
-                  controls
-                  className="w-full h-full"
-                  preload="metadata"
-                />
+                {isClient && (
+                  <video
+                    src="/examples/transformed1.mp4"
+                    controls
+                    className="w-full h-full"
+                    preload="metadata"
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -41,24 +53,28 @@ export function ExampleSection() {
             <div>
               <h4 className="text-lg font-medium mb-4">Original Video</h4>
               <div className="aspect-video rounded-lg overflow-hidden bg-black">
-                <video
-                  src="/examples/original2.mp4"
-                  controls
-                  className="w-full h-full"
-                  preload="metadata"
-                />
+                {isClient && (
+                  <video
+                    src="/examples/original2.mp4"
+                    controls
+                    className="w-full h-full"
+                    preload="metadata"
+                  />
+                )}
               </div>
             </div>
 
             <div>
               <h4 className="text-lg font-medium mb-4">Transformed Video</h4>
               <div className="aspect-video rounded-lg overflow-hidden bg-black">
-                <video
-                  src="/examples/transformed2.mp4"
-                  controls
-                  className="w-full h-full"
-                  preload="metadata"
-                />
+                {isClient && (
+                  <video
+                    src="/examples/transformed2.mp4"
+                    controls
+                    className="w-full h-full"
+                    preload="metadata"
+                  />
+                )}
               </div>
             </div>
           </div>
