@@ -13,13 +13,37 @@ const userPreferenceSchema = new mongoose.Schema({
     default: 'anime',
   },
   defaultParameters: {
-    intensity: {
+    num_inference_steps: {
       type: Number,
-      min: 0,
-      max: 100,
-      default: 50,
+      default: 30,
     },
-    style: String,
+    strength: {
+      type: Number,
+      default: 0.85,
+    },
+    aspect_ratio: {
+      type: String,
+      enum: ['16:9', '9:16'],
+      default: '16:9',
+    },
+    resolution: {
+      type: String,
+      enum: ['480p', '580p', '720p'],
+      default: '720p',
+    },
+    num_frames: {
+      type: Number,
+      enum: [85, 129],
+      default: 129,
+    },
+    pro_mode: {
+      type: Boolean,
+      default: false,
+    },
+    enable_safety_checker: {
+      type: Boolean,
+      default: true,
+    },
   },
   notifications: {
     email: {

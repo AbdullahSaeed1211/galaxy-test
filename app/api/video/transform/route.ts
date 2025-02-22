@@ -10,7 +10,6 @@ interface IUserPreference {
   userId: string;
   quotaUsed: number;
   quotaLimit: number;
-  defaultTransformationType: 'anime' | 'cartoon' | 'other';
   subscriptionTier: 'free' | 'pro' | 'enterprise';
 }
 
@@ -23,10 +22,17 @@ interface IVideoTransformation {
     size?: number;
     format?: string;
   };
-  transformationType: 'anime' | 'cartoon' | 'other';
   parameters: {
-    intensity: number;
-    style?: string;
+    prompt: string;
+    video_url: string;
+    num_inference_steps?: number;
+    seed?: number;
+    strength?: number;
+    aspect_ratio?: '16:9' | '9:16';
+    resolution?: '480p' | '580p' | '720p';
+    num_frames?: 85 | 129;
+    pro_mode?: boolean;
+    enable_safety_checker?: boolean;
   };
   status: 'pending' | 'processing' | 'completed' | 'failed';
   startedAt: Date;
@@ -35,11 +41,18 @@ interface IVideoTransformation {
 const transformRequestSchema = z.object({
   videoUrl: z.string().url(),
   uploadcareId: z.string(),
-  transformationType: z.enum(['anime', 'cartoon', 'other'] as const),
-  parameters: z.object({
-    intensity: z.number().min(0).max(100).default(50),
-    style: z.string().optional(),
-  }).optional(),
+  transformationParameters: z.object({
+    prompt: z.string().min(1),
+    video_url: z.string().url(),
+    num_inference_steps: z.number().min(10).max(50).default(30),
+    seed: z.number().optional(),
+    strength: z.number().min(0.1).max(1).default(0.85),
+    aspect_ratio: z.enum(['16:9', '9:16']).default('16:9'),
+    resolution: z.enum(['480p', '580p', '720p']).default('720p'),
+    num_frames: z.enum(['85', '129']).default('129'),
+    pro_mode: z.boolean().default(false),
+    enable_safety_checker: z.boolean().default(true),
+  }),
 });
 
 export async function POST(req: NextRequest) {
@@ -81,8 +94,7 @@ export async function POST(req: NextRequest) {
         url: validatedData.videoUrl,
         uploadcareId: validatedData.uploadcareId,
       },
-      transformationType: validatedData.transformationType,
-      parameters: validatedData.parameters || { intensity: 50 },
+      parameters: validatedData.transformationParameters,
       status: 'pending',
       startedAt: new Date(),
     });
@@ -93,8 +105,6 @@ export async function POST(req: NextRequest) {
       { $inc: { quotaUsed: 1 } }
     );
 
-    // Start transformation process (this would typically be handled by a background job)
-    // For now, we'll just return the transformation ID
     return NextResponse.json({
       transformationId: transformation._id,
       status: 'pending',

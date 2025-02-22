@@ -1,72 +1,84 @@
-import * as falai from '@fal-ai/serverless-client';
-import { config } from '@/lib/config';
+import { fal } from '@fal-ai/client';
 
 // Initialize Fal AI client
-falai.config({
-  credentials: config.falAi.apiKey,
+fal.config({
+  credentials: process.env.FAL_AI_API_KEY,
 });
 
-export interface TransformationOptions {
-  style: string;
-  intensity: number;
-  additionalParams?: Record<string, unknown>;
+// Based on Hunyuan Video API documentation
+interface TransformParams {
+  prompt: string;
+  video_url: string;
+  num_inference_steps?: number; // Default: 30
+  seed?: number;
+  strength?: number; // Default: 0.85
+  aspect_ratio?: '16:9' | '9:16'; // Default: "16:9"
+  resolution?: '480p' | '580p' | '720p'; // Default: "720p"
+  num_frames?: 85 | 129; // Default: 129
+  pro_mode?: boolean;
+  enable_safety_checker?: boolean;
 }
 
-export const startTransformation = async (
-  videoUrl: string,
-  options: TransformationOptions,
-  transformationId: string
-): Promise<void> => {
+interface TransformResult {
+  video: {
+    url: string;
+    content_type?: string;
+    file_name?: string;
+    file_size?: number;
+  };
+  seed?: number;
+}
+
+export async function transformVideo(params: TransformParams): Promise<TransformResult> {
   try {
-    await falai.subscribe(config.falAi.modelId, {
-      input: {
-        video_url: videoUrl,
-        style: options.style,
-        intensity: options.intensity,
-        ...options.additionalParams,
-      },
-      onQueueUpdate: (update) => {
-        console.log('Queue position:', update.queuePosition);
-      },
-      onResult: async (result) => {
-        // The result handling will be done by the webhook
-        console.log('Transformation completed:', result);
-      },
-      onError: (error) => {
-        console.error('Transformation error:', error);
-        // Error handling will be done by the webhook
-      },
+    const result = await fal.subscribe("fal-ai/hunyuan-video/video-to-video", {
+      input: params,
+    });
+
+    if (!result?.data?.video?.url) {
+      throw new Error('Failed to process video');
+    }
+
+    return result.data;
+  } catch (error) {
+    console.error('Error in transformVideo:', error);
+    throw error;
+  }
+}
+
+export async function queueTransformation(params: TransformParams, webhookUrl?: string): Promise<string> {
+  try {
+    const { request_id } = await fal.queue.submit("fal-ai/hunyuan-video/video-to-video", {
+      input: params,
+      webhookUrl,
+    });
+    return request_id;
+  } catch (error) {
+    console.error('Error queueing transformation:', error);
+    throw error;
+  }
+}
+
+export async function getTransformationStatus(requestId: string) {
+  try {
+    return await fal.queue.status("fal-ai/hunyuan-video/video-to-video", {
+      requestId,
       logs: true,
-      webhook: {
-        url: `${config.app.url}/api/webhook/fal`,
-        headers: {
-          'x-transformation-id': transformationId,
-        },
-      },
     });
   } catch (error) {
-    console.error('Error starting transformation:', error);
-    throw new Error('Failed to start video transformation');
+    console.error('Error getting transformation status:', error);
+    throw error;
   }
-};
+}
 
-export const getTransformationStyles = () => {
-  return config.transformationStyles.map(style => ({
-    id: style.id,
-    name: style.name,
-    description: style.description,
-  }));
-};
-
-export const validateTransformationOptions = (options: TransformationOptions): boolean => {
-  if (options.intensity < 0 || options.intensity > 100) {
-    throw new Error('Intensity must be between 0 and 100');
+export async function getTransformationResult(requestId: string): Promise<TransformResult> {
+  try {
+    const result = await fal.queue.result("fal-ai/hunyuan-video/video-to-video", {
+      requestId,
+    });
+    return result.data;
+  } catch (error) {
+    console.error('Error getting transformation result:', error);
+    throw error;
   }
-
-  const validStyles = config.transformationStyles.map(style => style.id);
-  if (!validStyles.includes(options.style)) {
-    throw new Error(`Style must be one of: ${validStyles.join(', ')}`);
-  }
-
-  return true;
-}; 
+} 

@@ -13,37 +13,13 @@ import {
 import { FileUploaderRegular } from "@uploadcare/react-uploader/next";
 import "@uploadcare/react-uploader/core.css";
 import { toast } from "react-hot-toast";
-import { config } from "@/lib/config";
 import { Switch } from "./ui/switch";
 import { Input } from "./ui/input";
 import Link from "next/link";
-
-const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
-
-interface TransformationParams {
-  prompt: string;
-  num_inference_steps: number;
-  strength: number;
-  aspect_ratio: "16:9" | "9:16";
-  resolution: "480p" | "580p" | "720p";
-  num_frames: 85 | 129;
-  pro_mode: boolean;
-  enable_safety_checker: boolean;
-}
-
-const defaultParams: TransformationParams = {
-  prompt: "",
-  num_inference_steps: 30,
-  strength: 0.75,
-  aspect_ratio: "16:9",
-  resolution: "720p",
-  num_frames: 129,
-  pro_mode: false,
-  enable_safety_checker: true,
-};
+import { TransformationParams, DEFAULT_PARAMS, MAX_VIDEO_SIZE } from "@/types/video";
 
 export function UploadSection() {
-  const [params, setParams] = useState<TransformationParams>(defaultParams);
+  const [params, setParams] = useState<TransformationParams>(DEFAULT_PARAMS);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -166,7 +142,7 @@ export function UploadSection() {
 
                 <div className="border rounded-lg p-8 border-dashed flex flex-col items-center justify-center">
                   <FileUploaderRegular
-                    pubkey={config.uploadcare.publicKey}
+                    pubkey={process.env.NEXT_PUBLIC_UPLOADCARE_PUBLIC_KEY || ''}
                     onChange={handleUploadComplete}
                     onFileUploadFailed={handleUploadFailed}
                     maxLocalFileSizeBytes={MAX_VIDEO_SIZE}

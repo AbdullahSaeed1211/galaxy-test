@@ -16,10 +16,17 @@ interface IVideoTransformation {
     url: string;
     cloudinaryId: string;
   };
-  transformationType: string;
   parameters: {
-    intensity: number;
-    style?: string;
+    prompt: string;
+    video_url: string;
+    num_inference_steps: number;
+    seed: number;
+    strength: number;
+    aspect_ratio: '16:9' | '9:16';
+    resolution: '480p' | '580p' | '720p';
+    num_frames: '85' | '129';
+    pro_mode: boolean;
+    enable_safety_checker: boolean;
   };
   error?: string;
   startedAt: Date;
@@ -64,7 +71,6 @@ export async function GET(req: NextRequest) {
       status: transformation.status,
       originalVideo: transformation.originalVideo,
       transformedVideo: transformation.transformedVideo,
-      transformationType: transformation.transformationType,
       parameters: transformation.parameters,
       error: transformation.error,
       startedAt: transformation.startedAt,

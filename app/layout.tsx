@@ -1,12 +1,4 @@
-import {
-  ClerkProvider,
-  // SignInButton,
-  // SignUpButton,
-  // SignedIn,
-  // SignedOut,
-  // UserButton,
-} from "@clerk/nextjs";
-
+import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Toaster } from 'react-hot-toast' 
 import { Geist, Geist_Mono } from "next/font/google";

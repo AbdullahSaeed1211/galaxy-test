@@ -17,20 +17,44 @@ const videoTransformationSchema = new mongoose.Schema({
     url: String,
     cloudinaryId: String,
   },
-  transformationType: {
-    type: String,
-    enum: ['anime', 'cartoon', 'other'],
-    required: true,
-  },
   parameters: {
-    intensity: {
-      type: Number,
-      min: 0,
-      max: 100,
-      default: 50,
+    prompt: {
+      type: String,
+      required: true,
     },
-    style: String,
-    additionalParams: mongoose.Schema.Types.Mixed,
+    video_url: String,
+    num_inference_steps: {
+      type: Number,
+      default: 30,
+    },
+    seed: Number,
+    strength: {
+      type: Number,
+      default: 0.85,
+    },
+    aspect_ratio: {
+      type: String,
+      enum: ['16:9', '9:16'],
+      default: '16:9',
+    },
+    resolution: {
+      type: String,
+      enum: ['480p', '580p', '720p'],
+      default: '720p',
+    },
+    num_frames: {
+      type: Number,
+      enum: [85, 129],
+      default: 129,
+    },
+    pro_mode: {
+      type: Boolean,
+      default: false,
+    },
+    enable_safety_checker: {
+      type: Boolean,
+      default: true,
+    },
   },
   status: {
     type: String,
