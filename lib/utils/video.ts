@@ -1,12 +1,14 @@
 import { v2 as cloudinary } from 'cloudinary';
-import { config } from '@/lib/config';
 
 // Configure Cloudinary
 cloudinary.config({
-  cloud_name: config.cloudinary.cloudName,
-  api_key: config.cloudinary.apiKey,
-  api_secret: config.cloudinary.apiSecret,
+  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
+const ALLOWED_FORMATS = ['mp4', 'mov', 'avi', 'wmv'];
 
 export interface VideoMetadata {
   format: string;
@@ -17,16 +19,14 @@ export interface VideoMetadata {
 }
 
 export const validateVideoFile = (file: File): boolean => {
-  const maxSize = config.uploadcare.maxVideoSize;
-  const allowedFormats = config.uploadcare.allowedFormats;
   const format = file.name.split('.').pop()?.toLowerCase() || '';
 
-  if (file.size > maxSize) {
-    throw new Error(`File size must be less than ${maxSize / (1024 * 1024)}MB`);
+  if (file.size > MAX_VIDEO_SIZE) {
+    throw new Error(`File size must be less than ${MAX_VIDEO_SIZE / (1024 * 1024)}MB`);
   }
 
-  if (!allowedFormats.includes(format)) {
-    throw new Error(`File format must be one of: ${allowedFormats.join(', ')}`);
+  if (!ALLOWED_FORMATS.includes(format)) {
+    throw new Error(`File format must be one of: ${ALLOWED_FORMATS.join(', ')}`);
   }
 
   return true;
