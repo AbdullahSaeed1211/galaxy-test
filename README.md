@@ -169,14 +169,6 @@ Before deploying to production, ensure:
    - [ ] Usage analytics are implemented
    - [ ] Health checks are in place
 
-## Contributing 🤝
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License 📄
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
