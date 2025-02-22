@@ -17,6 +17,7 @@ import { Switch } from "./ui/switch";
 import { Input } from "./ui/input";
 import Link from "next/link";
 import { TransformationParams, DEFAULT_PARAMS, MAX_VIDEO_SIZE } from "@/types/video";
+import { Card } from "./ui/card";
 
 export function UploadSection() {
   const [params, setParams] = useState<TransformationParams>(DEFAULT_PARAMS);
@@ -125,14 +126,14 @@ export function UploadSection() {
   };
 
   return (
-    <section className="py-16 bg-white" id="upload">
+    <section className="py-6 bg-white" id="upload">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
-          {/* <h2 className="text-4xl font-bold text-center mb-8">Transform Your Video</h2> */}
 
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid md:grid-cols-5 gap-6">
             {/* Left Column - Upload and Parameters */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
+            <Card className="bg-white rounded-lg shadow-sm p-6 md:col-span-2">
+              <h2 className="text-lg font-semibold mb-4">Upload Video</h2>
               <div className="space-y-6">
                 {error && (
                   <div className="bg-red-50 border border-red-200 rounded-md p-4">
@@ -150,6 +151,7 @@ export function UploadSection() {
                     sourceList={["local", "camera", "url"].join(", ")}
                     className="uc-video-uploader"
                     accept="video/*"
+                    classNameUploader="uc-light"
                   />
                   <p className="text-center text-sm text-gray-500 mt-4">
                     Supported formats: MP4, MOV, AVI, WMV
@@ -385,10 +387,10 @@ export function UploadSection() {
                   )}
                 </div>
               </div>
-            </div>
+            </Card>
 
             {/* Right Column - Preview */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
+            <Card className="bg-white rounded-lg md:col-span-3 shadow-sm p-6">
               <h3 className="text-lg font-semibold mb-4">Preview</h3>
               {previewUrl ? (
                 <div className="space-y-4">
@@ -412,7 +414,7 @@ export function UploadSection() {
                   </div>
                 </div>
               ) : (
-                <div className="aspect-video rounded-lg border-2 border-dashed border-gray-200 flex flex-col items-center justify-center p-6 text-center">
+                <div className="aspect-video rounded-lg flex flex-col items-center justify-center p-6 text-center">
                   <Video className="h-12 w-12 text-gray-400 mb-4" />
                   <h4 className="text-lg font-medium text-gray-900">
                     Ready to Process
@@ -422,7 +424,7 @@ export function UploadSection() {
                   </p>
                 </div>
               )}
-            </div>
+            </Card>
           </div>
         </div>
       </div>
