@@ -3,7 +3,9 @@ import type { Metadata } from "next";
 import { Toaster } from 'react-hot-toast' 
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Navigation from "./components/navigation";
+import { AppSidebar } from "./components/app-siderbar";
+import { SidebarProvider, SidebarTrigger } from "@/app/components/ui/sidebar"
+import { Card } from "./components/ui/card";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,11 +32,14 @@ export default function RootLayout({
       <html lang="en">
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <Navigation />
-         <main className="min-h-screen bg-background">
+        <SidebarProvider>
+        <AppSidebar />
+         <Card className="m-2 w-full">
+            <SidebarTrigger className="m-2" />
             {children}
-          </main>
+          </Card>
           <Toaster />
+        </SidebarProvider>
         </body>
       </html>
     </ClerkProvider>

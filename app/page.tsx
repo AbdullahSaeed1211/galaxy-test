@@ -17,7 +17,7 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen w-full bg-white">
       <HeroSection />
       <UploadSection />
       <ExampleSection />
