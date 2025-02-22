@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Video, ChevronDown, ChevronUp } from "lucide-react"
+import { Video, ChevronDown, ChevronUp, RefreshCw } from "lucide-react"
 import { Button } from "./ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { FileUploaderRegular } from '@uploadcare/react-uploader/next'
@@ -10,6 +10,7 @@ import { toast } from 'react-hot-toast'
 import { config } from '@/lib/config'
 import { Switch } from './ui/switch'
 import { Input } from './ui/input'
+import Link from 'next/link'
 
 // Custom styles for Uploadcare uploader
 const uploaderStyles = `
@@ -150,7 +151,12 @@ export function UploadSection() {
         throw new Error(error.error || 'Failed to process video');
       }
 
-      toast.success('Video processing started! Check history for updates.');
+      const data = await response.json();
+      
+      // Redirect to history page after successful processing start
+      window.location.href = '/history';
+      
+      toast.success('Video processing started! Redirecting to history...');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       toast.error(err instanceof Error ? err.message : 'An error occurred');
@@ -379,6 +385,26 @@ export function UploadSection() {
                       <Video className="w-5 h-5" />
                       {processing ? 'Processing...' : 'Transform Video'}
                     </Button>
+
+                    {processing && (
+                      <div className="mt-4 text-center space-y-4">
+                        <div className="p-4 bg-purple-50 rounded-lg">
+                          <p className="text-sm text-purple-800 font-medium mb-2">
+                            Your video is being processed
+                          </p>
+                          <p className="text-sm text-purple-600">
+                            This typically takes 3-5 minutes. You can check the status in your history.
+                          </p>
+                        </div>
+                        <Link
+                          href="/history"
+                          className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-[#8B5CF6] hover:text-[#7C3AED] bg-white border border-[#8B5CF6] rounded-md hover:bg-purple-50 transition-colors"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          View Status in History
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
