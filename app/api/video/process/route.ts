@@ -1,102 +1,111 @@
-import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { fal } from '@fal-ai/client';
-import { uploadVideo } from '@/lib/cloudinary';
-import { VideoProcessing } from '@/lib/models/video';
+import { NextResponse, NextRequest } from 'next/server';
+import { getAuth } from '@clerk/nextjs/server';
+import { v2 as cloudinary } from 'cloudinary';
+import VideoProcessing from '@/lib/models/video';
 import connectToDatabase from '@/lib/mongodb';
+import { fal } from "@fal-ai/client";
 
-if (!process.env.FAL_KEY) {
-  throw new Error('Missing Fal.ai credentials');
-}
-
-interface HunyuanVideoRequest {
-  prompt: string;
-  num_inference_steps?: number;
-  seed?: number;
-  pro_mode?: boolean;
-  aspect_ratio?: '16:9' | '9:16';
-  resolution?: '480p' | '580p' | '720p';
-  num_frames?: 129 | 85;
-  enable_safety_checker?: boolean;
-  video_url: string;
-  strength?: number;
-}
-
-interface HunyuanVideoResult {
-  video: {
-    url: string;
-    content_type?: string;
-    file_name?: string;
-    file_size?: number;
-  };
-  seed?: number;
-}
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 // Configure Fal AI client
 fal.config({
-  credentials: process.env.FAL_KEY,
+  credentials: process.env.FAL_API_KEY
 });
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const { userId } = await auth();
+    // Check authentication
+    const { userId } = getAuth(req);
+    
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Connect to database
+    await connectToDatabase();
+
+    // Parse request body
     const { sourceVideoUrl, sourceVideoName, transformationParameters } = await req.json();
 
-    if (!sourceVideoUrl || !transformationParameters) {
+    // Validate required fields
+    if (!sourceVideoUrl || !sourceVideoName || !transformationParameters) {
       return NextResponse.json(
-        { error: 'Missing required parameters' },
+        { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    // Upload video to Cloudinary
-    const cloudinaryUrl = await uploadVideo(sourceVideoUrl);
+    // Upload to Cloudinary
+    const cloudinaryUpload = await cloudinary.uploader.upload(sourceVideoUrl, {
+      resource_type: 'video',
+      folder: 'source-videos',
+    });
 
-    // Connect to database
-    await connectToDatabase();
+    // Generate unique request ID for webhook
+    const requestId = `${userId}-${Date.now()}`;
 
-    // Create processing record
-    const videoProcessing = await VideoProcessing.create({
+    // Create video processing record
+    const videoProcessing = new VideoProcessing({
       userId,
-      sourceVideoUrl: cloudinaryUrl,
+      sourceVideoUrl: cloudinaryUpload.secure_url,
       sourceVideoName,
-      transformationParameters,
-      status: 'pending',
-    });
-
-    // Submit to Fal.ai queue
-    const { request_id } = await fal.queue.submit('fal-ai/hunyuan-video/video-to-video', {
-      input: {
-        video_url: cloudinaryUrl,
+      sourceVideoSize: cloudinaryUpload.bytes,
+      sourceVideoFormat: cloudinaryUpload.format,
+      transformationParameters: {
         ...transformationParameters,
-      } as HunyuanVideoRequest,
-      webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/video/webhook`,
+        video_url: cloudinaryUpload.secure_url,
+        requestId,
+      },
+      status: 'pending',
+      processingStartedAt: new Date(),
+    });
+    await videoProcessing.save();
+
+    // Call Fal API using their client
+    const falResult = await fal.subscribe("fal-ai/hunyuan-video/video-to-video", {
+      input: {
+        prompt: transformationParameters.prompt,
+        video_url: cloudinaryUpload.secure_url,
+        num_inference_steps: transformationParameters.num_inference_steps,
+        seed: transformationParameters.seed,
+        strength: transformationParameters.strength,
+        aspect_ratio: transformationParameters.aspect_ratio,
+        resolution: transformationParameters.resolution,
+        num_frames: transformationParameters.num_frames,
+        pro_mode: transformationParameters.pro_mode,
+        enable_safety_checker: transformationParameters.enable_safety_checker,
+      },
+      logs: true,
+      onQueueUpdate: async (update) => {
+        if (update.status === "IN_PROGRESS") {
+          console.log("Processing:", update.logs.map((log) => log.message));
+        }
+      },
     });
 
-    // Update processing record with request ID
-    await VideoProcessing.findByIdAndUpdate(
-      videoProcessing._id,
-      {
-        $set: {
-          'transformationParameters.requestId': request_id,
-          status: 'processing',
-        },
-      }
-    );
+    if (!falResult?.data?.video?.url) {
+      throw new Error('Failed to process video');
+    }
+
+    // Update status to processing
+    videoProcessing.status = 'processing';
+    videoProcessing.transformedVideoUrl = falResult.data.video.url;
+    await videoProcessing.save();
 
     return NextResponse.json({
-      processingId: videoProcessing._id,
-      requestId: request_id,
-      status: 'processing',
+      message: 'Video processing started',
+      requestId: falResult.requestId,
+      videoProcessingId: videoProcessing._id,
     });
   } catch (error) {
     console.error('Error processing video:', error);
     return NextResponse.json(
-      { error: 'Failed to process video' },
+      { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
     );
   }

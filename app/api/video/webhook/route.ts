@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { uploadVideo } from '@/lib/cloudinary';
+import { v2 as cloudinary } from 'cloudinary';
 import { VideoProcessing } from '@/lib/models/video';
-import connectToDatabase from '@/lib/mongodb';
+import { connectToDatabase } from '@/lib/mongodb';
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 // Webhook secret should be configured in Fal AI dashboard and stored in environment variables
 const WEBHOOK_SECRET = process.env.FAL_AI_WEBHOOK_SECRET;
@@ -35,12 +42,23 @@ export async function POST(req: NextRequest) {
     // TODO: Implement proper signature verification
     // This is a placeholder for the actual signature verification logic
 
-    const body: HunyuanWebhookBody = await req.json();
-
-    // Find the processing record by request ID
+    // Connect to database
     await connectToDatabase();
+
+    // Get request ID from query params
+    const url = new URL(req.url);
+    const requestId = url.searchParams.get('requestId');
+
+    if (!requestId) {
+      return NextResponse.json({ error: 'Missing requestId' }, { status: 400 });
+    }
+
+    // Parse webhook payload
+    const webhookData = await req.json();
+    
+    // Find the processing record
     const videoProcessing = await VideoProcessing.findOne({
-      'transformationParameters.requestId': body.request_id,
+      'transformationParameters.requestId': requestId
     });
 
     if (!videoProcessing) {
@@ -50,41 +68,49 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (body.status === 'failed' || body.error) {
-      // Update record with error
-      videoProcessing.status = 'failed';
-      videoProcessing.error = body.error || 'Unknown error occurred';
-      await videoProcessing.save();
+    try {
+      // Upload transformed video to Cloudinary
+      const cloudinaryUpload = await cloudinary.uploader.upload(webhookData.video.url, {
+        resource_type: 'video',
+        folder: 'transformed-videos',
+      });
 
-      return NextResponse.json({ status: 'failed', error: body.error });
-    }
-
-    if (!body.output?.video?.url) {
-      return NextResponse.json(
-        { error: 'Missing transformed video URL' },
-        { status: 400 }
+      // Update processing record
+      const now = new Date();
+      await VideoProcessing.findByIdAndUpdate(
+        videoProcessing._id,
+        {
+          transformedVideoUrl: cloudinaryUpload.secure_url,
+          transformedVideoSize: cloudinaryUpload.bytes,
+          transformedVideoFormat: cloudinaryUpload.format,
+          status: 'completed',
+          processingCompletedAt: now,
+          $set: {
+            'transformationParameters.processingEndTime': now,
+            'transformationParameters.totalProcessingTime': 
+              now.getTime() - videoProcessing.processingStartedAt.getTime()
+          }
+        }
       );
+
+      return NextResponse.json({ status: 'success' });
+    } catch (error) {
+      // Update processing record with error
+      await VideoProcessing.findByIdAndUpdate(
+        videoProcessing._id,
+        {
+          status: 'failed',
+          error: error instanceof Error ? error.message : 'Failed to process video',
+          processingCompletedAt: new Date()
+        }
+      );
+
+      throw error;
     }
-
-    // Upload transformed video to Cloudinary
-    const cloudinaryUrl = await uploadVideo(
-      body.output.video.url,
-      `transformed-${videoProcessing._id}`
-    );
-
-    // Update processing record
-    videoProcessing.transformedVideoUrl = cloudinaryUrl;
-    videoProcessing.status = 'completed';
-    await videoProcessing.save();
-
-    return NextResponse.json({
-      status: 'completed',
-      transformedVideoUrl: cloudinaryUrl,
-    });
   } catch (error) {
-    console.error('Error handling webhook:', error);
+    console.error('Webhook processing error:', error);
     return NextResponse.json(
-      { error: 'Failed to handle webhook' },
+      { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
     );
   }
