@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { FileUploaderRegular } from '@uploadcare/react-uploader/next';
+import type { OutputCollectionState, OutputCollectionStatus } from '@uploadcare/react-uploader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Slider } from '@/app/components/ui/slider';
 import { toast } from 'react-hot-toast';
@@ -38,10 +39,16 @@ export default function VideoTransformForm() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleUploadComplete = async (fileInfo: any) => {
+  const handleUploadComplete = async (event: OutputCollectionState<OutputCollectionStatus, "maybe-has-group">) => {
     try {
       setUploading(true);
       setError(null);
+
+      if (!event.successEntries.length) {
+        throw new Error('No file uploaded');
+      }
+
+      const fileInfo = event.successEntries[0];
 
       // Start processing
       setProcessing(true);
@@ -211,12 +218,13 @@ export default function VideoTransformForm() {
       </div>
 
       <div className="border-t pt-6">
-        <FileUploaderRegular
-          pubkey={process.env.NEXT_PUBLIC_UPLOADCARE_PUBLIC_KEY || ''}
-          onChange={handleUploadComplete}
-          accept="video/*"
-          disabled={uploading || processing}
-        />
+        {!uploading && !processing && (
+          <FileUploaderRegular
+            pubkey={process.env.NEXT_PUBLIC_UPLOADCARE_PUBLIC_KEY || ''}
+            onChange={handleUploadComplete}
+            accept="video/*"
+          />
+        )}
         <p className="text-xs text-gray-500 mt-2">
           Supported formats: MP4, MOV, AVI, WMV. Maximum size: 100MB
         </p>
