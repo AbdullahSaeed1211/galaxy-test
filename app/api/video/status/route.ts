@@ -1,11 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs';
+import { auth } from '@clerk/nextjs/server';
 import { VideoTransformation } from '@/lib/models/VideoTransformation';
 import connectDB from '@/lib/mongodb';
+import { FilterQuery, Model } from 'mongoose';
+
+interface IVideoTransformation {
+  _id: string;
+  userId: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  originalVideo: {
+    url: string;
+    uploadcareId: string;
+  };
+  transformedVideo?: {
+    url: string;
+    cloudinaryId: string;
+  };
+  transformationType: string;
+  parameters: {
+    intensity: number;
+    style?: string;
+  };
+  error?: string;
+  startedAt: Date;
+  completedAt?: Date;
+  createdAt: Date;
+}
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -23,7 +47,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const transformation = await VideoTransformation.findOne({
+    const VideoTransformationModel = VideoTransformation as Model<IVideoTransformation>;
+    const transformation = await VideoTransformationModel.findOne({
       _id: transformationId,
       userId,
     });
@@ -58,7 +83,7 @@ export async function GET(req: NextRequest) {
 // Get all transformations for the user
 export async function POST(req: NextRequest) {
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -71,17 +96,18 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { page = 1, limit = 10, status } = body;
 
-    const query = { userId } as any;
+    const query: FilterQuery<IVideoTransformation> = { userId };
     if (status) {
       query.status = status;
     }
 
-    const transformations = await VideoTransformation.find(query)
+    const VideoTransformationModel = VideoTransformation as Model<IVideoTransformation>;
+    const transformations = await VideoTransformationModel.find(query)
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
 
-    const total = await VideoTransformation.countDocuments(query);
+    const total = await VideoTransformationModel.countDocuments(query);
 
     return NextResponse.json({
       transformations,

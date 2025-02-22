@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
-import { VideoProcessing } from '@/lib/models/video';
-import { connectToDatabase } from '@/lib/mongodb';
+import { VideoProcessing, VideoProcessing as IVideoProcessing } from '@/lib/models/video';
+import connectToDatabase from '@/lib/mongodb';
+import type { Model } from 'mongoose';
 
 // Configure Cloudinary
 cloudinary.config({
@@ -54,10 +55,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Parse webhook payload
-    const webhookData = await req.json();
+    const webhookData = await req.json() as HunyuanWebhookBody;
     
     // Find the processing record
-    const videoProcessing = await VideoProcessing.findOne({
+    const VideoProcessingModel = VideoProcessing as Model<IVideoProcessing>;
+    const videoProcessing = await VideoProcessingModel.findOne({
       'transformationParameters.requestId': requestId
     });
 
@@ -70,14 +72,14 @@ export async function POST(req: NextRequest) {
 
     try {
       // Upload transformed video to Cloudinary
-      const cloudinaryUpload = await cloudinary.uploader.upload(webhookData.video.url, {
+      const cloudinaryUpload = await cloudinary.uploader.upload(webhookData.output?.video.url || '', {
         resource_type: 'video',
         folder: 'transformed-videos',
       });
 
       // Update processing record
       const now = new Date();
-      await VideoProcessing.findByIdAndUpdate(
+      await VideoProcessingModel.findByIdAndUpdate(
         videoProcessing._id,
         {
           transformedVideoUrl: cloudinaryUpload.secure_url,
@@ -96,7 +98,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: 'success' });
     } catch (error) {
       // Update processing record with error
-      await VideoProcessing.findByIdAndUpdate(
+      await VideoProcessingModel.findByIdAndUpdate(
         videoProcessing._id,
         {
           status: 'failed',

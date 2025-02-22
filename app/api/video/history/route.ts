@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import VideoProcessing from '@/lib/models/video';
+import VideoProcessing, { VideoProcessing as IVideoProcessing } from '@/lib/models/video';
 import connectToDatabase from '@/lib/mongodb';
+import type { FilterQuery, Model } from 'mongoose';
 
 export async function GET(req: Request) {
   try {
@@ -22,7 +23,7 @@ export async function GET(req: Request) {
     const status = url.searchParams.get('status');
 
     // Build query
-    const query: any = { userId };
+    const query: FilterQuery<IVideoProcessing> = { userId };
     if (status) {
       query.status = status;
     }
@@ -32,12 +33,12 @@ export async function GET(req: Request) {
 
     // Fetch processing records
     const [records, total] = await Promise.all([
-      VideoProcessing.find(query)
+      (VideoProcessing as Model<IVideoProcessing>).find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
-      VideoProcessing.countDocuments(query),
+      (VideoProcessing as Model<IVideoProcessing>).countDocuments(query),
     ]);
 
     // Calculate pagination metadata

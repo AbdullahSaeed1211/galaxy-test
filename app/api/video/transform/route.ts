@@ -1,10 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs';
+import { auth } from '@clerk/nextjs/server';
 import { z } from 'zod';
-import { config, TransformationStyle } from '@/lib/config';
 import { VideoTransformation } from '@/lib/models/VideoTransformation';
 import { UserPreference } from '@/lib/models/UserPreference';
 import connectDB from '@/lib/mongodb';
+import type { Model } from 'mongoose';
+
+interface IUserPreference {
+  userId: string;
+  quotaUsed: number;
+  quotaLimit: number;
+  defaultTransformationType: 'anime' | 'cartoon' | 'other';
+  subscriptionTier: 'free' | 'pro' | 'enterprise';
+}
+
+interface IVideoTransformation {
+  userId: string;
+  originalVideo: {
+    url: string;
+    uploadcareId: string;
+    cloudinaryId?: string;
+    size?: number;
+    format?: string;
+  };
+  transformationType: 'anime' | 'cartoon' | 'other';
+  parameters: {
+    intensity: number;
+    style?: string;
+  };
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  startedAt: Date;
+}
 
 const transformRequestSchema = z.object({
   videoUrl: z.string().url(),
@@ -18,7 +44,7 @@ const transformRequestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -33,7 +59,7 @@ export async function POST(req: NextRequest) {
     const validatedData = transformRequestSchema.parse(body);
 
     // Check user quota
-    const userPref = await UserPreference.findOne({ userId });
+    const userPref = await (UserPreference as Model<IUserPreference>).findOne({ userId });
     if (!userPref) {
       return NextResponse.json(
         { error: 'User preferences not found' },
@@ -49,7 +75,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create transformation record
-    const transformation = await VideoTransformation.create({
+    const transformation = await (VideoTransformation as Model<IVideoTransformation>).create({
       userId,
       originalVideo: {
         url: validatedData.videoUrl,
@@ -62,7 +88,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Increment quota used
-    await UserPreference.updateOne(
+    await (UserPreference as Model<IUserPreference>).updateOne(
       { userId },
       { $inc: { quotaUsed: 1 } }
     );
