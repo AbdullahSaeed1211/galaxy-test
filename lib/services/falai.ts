@@ -46,15 +46,23 @@ export async function transformVideo(params: TransformParams): Promise<Transform
   }
 }
 
-export async function queueTransformation(params: TransformParams, webhookUrl?: string): Promise<string> {
+export async function queueVideoTransformation(params: TransformParams, transformationId: string): Promise<string> {
   try {
+    // Submit to Fal AI queue with webhook pointing to our production endpoint
     const { request_id } = await fal.queue.submit("fal-ai/hunyuan-video/video-to-video", {
       input: params,
-      webhookUrl,
+      webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhook/fal?transformationId=${transformationId}`,
     });
+    
+    console.log('Queued video transformation:', { 
+      transformationId, 
+      requestId: request_id,
+      webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhook/fal?transformationId=${transformationId}`,
+    });
+    
     return request_id;
   } catch (error) {
-    console.error('Error queueing transformation:', error);
+    console.error('Error queueing video transformation:', error);
     throw error;
   }
 }
