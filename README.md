@@ -2,6 +2,9 @@
 
 A powerful AI-powered video transformation tool built with Next.js that uses the Fal AI Hunyuan-Video Model to apply advanced video transformations. Users can upload source videos and specify transformation parameters to generate stylized or enhanced output videos.
 
+## FLOW
+![Image](https://github.com/user-attachments/assets/4dfe79a9-a6b5-4a10-8486-aacd60614e69)
+
 ## Features ✨
 
 ### Core Functionality
