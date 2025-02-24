@@ -29,6 +29,11 @@ interface TransformResult {
   seed?: number;
 }
 
+interface FalApiError extends Error {
+  status?: number;
+  body?: unknown;
+}
+
 export async function transformVideo(params: TransformParams): Promise<TransformResult> {
   try {
     const result = await fal.subscribe("fal-ai/hunyuan-video/video-to-video", {
@@ -48,21 +53,45 @@ export async function transformVideo(params: TransformParams): Promise<Transform
 
 export async function queueVideoTransformation(params: TransformParams, transformationId: string): Promise<string> {
   try {
+    // Validate required parameters
+    if (!params.prompt || !params.video_url) {
+      throw new Error('Missing required parameters: prompt and video_url are required');
+    }
+
+    // Construct webhook URL properly
+    const webhookUrl = new URL('/api/webhook/fal', process.env.NEXT_PUBLIC_APP_URL);
+    webhookUrl.searchParams.set('transformationId', transformationId);
+
+    // Log the input parameters for debugging
+    console.log('Attempting to queue video transformation with params:', {
+      params,
+      transformationId,
+      webhookUrl: webhookUrl.toString(),
+    });
+
     // Submit to Fal AI queue with webhook pointing to our production endpoint
     const { request_id } = await fal.queue.submit("fal-ai/hunyuan-video/video-to-video", {
       input: params,
-      webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhook/fal?transformationId=${transformationId}`,
+      webhookUrl: webhookUrl.toString(),
     });
     
-    console.log('Queued video transformation:', { 
+    console.log('Successfully queued video transformation:', { 
       transformationId, 
       requestId: request_id,
-      webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhook/fal?transformationId=${transformationId}`,
+      webhookUrl: webhookUrl.toString(),
     });
     
     return request_id;
   } catch (error) {
-    console.error('Error queueing video transformation:', error);
+    // Log detailed error information
+    const apiError = error as FalApiError;
+    console.error('Error queueing video transformation:', {
+      error: apiError.message,
+      status: apiError.status,
+      body: apiError.body,
+      params,
+      transformationId,
+    });
     throw error;
   }
 }

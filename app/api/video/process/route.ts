@@ -3,10 +3,10 @@ import { getAuth } from '@clerk/nextjs/server';
 import { v2 as cloudinary } from 'cloudinary';
 import connectToDatabase from '@/lib/mongodb';
 import { fal } from "@fal-ai/client";
-import { VideoTransformation } from '@/lib/models/VideoTransformation';
+import { VideoProcessing, type VideoProcessing as IVideoProcessing } from '@/lib/models/video';
 import { queueVideoTransformation } from '@/lib/services/falai';
 import { Model } from 'mongoose';
-import { IVideoTransformation } from '@/lib/types/video';
+import { uploadToCloudinary } from '@/lib/utils/video';
 
 // Configure Cloudinary
 cloudinary.config({
@@ -33,34 +33,58 @@ export async function POST(req: NextRequest) {
 
     const { sourceVideoUrl, sourceVideoName, transformationParameters } = await req.json();
 
-    // Create transformation record
-    const VideoTransformationModel = VideoTransformation as Model<IVideoTransformation>;
-    const transformation = await VideoTransformationModel.create({
+    // Step 1: Upload source video to Cloudinary
+    console.log('Step 1: Uploading source video from Uploadcare to Cloudinary:', {
+      sourceVideoUrl,
+      sourceVideoName
+    });
+    const cloudinarySourceUrl = await uploadToCloudinary(sourceVideoUrl);
+    console.log('Step 1 Complete: Source video uploaded to Cloudinary:', cloudinarySourceUrl);
+
+    // Step 2: Create video processing record
+    console.log('Step 2: Creating processing record in MongoDB');
+    const VideoProcessingModel = VideoProcessing as Model<IVideoProcessing>;
+    const processing = await VideoProcessingModel.create({
       userId,
-      originalVideo: {
-        url: sourceVideoUrl,
-        uploadcareId: sourceVideoName,
+      sourceVideoUrl: cloudinarySourceUrl,
+      sourceVideoName,
+      transformationParameters: {
+        ...transformationParameters,
+        video_url: cloudinarySourceUrl,
       },
-      parameters: transformationParameters,
       status: 'pending',
-      startedAt: new Date(),
+      processingStartedAt: new Date(),
+    });
+    console.log('Step 2 Complete: Processing record created:', processing._id.toString());
+
+    // Step 3: Queue transformation with Fal AI
+    console.log('Step 3: Queueing transformation with Fal AI:', {
+      processingId: processing._id.toString(),
+      cloudinarySourceUrl
+    });
+    const requestId = await queueVideoTransformation(
+      {
+        ...transformationParameters,
+        video_url: cloudinarySourceUrl,
+      },
+      processing._id.toString()
+    );
+    console.log('Step 3 Complete: Transformation queued with Fal AI:', {
+      requestId,
+      processingId: processing._id.toString()
     });
 
-    // Queue the transformation with Fal AI
-    const requestId = await queueVideoTransformation(
-      transformationParameters,
-      transformation._id.toString()
-    );
-
-    // Update record with request ID
-    await VideoTransformationModel.findByIdAndUpdate(transformation._id, {
-      'parameters.requestId': requestId,
+    // Step 4: Update record with request ID
+    console.log('Step 4: Updating processing record with request ID');
+    await VideoProcessingModel.findByIdAndUpdate(processing._id, {
+      'transformationParameters.requestId': requestId,
       status: 'processing',
     });
+    console.log('Step 4 Complete: Processing record updated');
 
     return NextResponse.json({
       message: 'Video processing queued successfully',
-      transformationId: transformation._id,
+      processingId: processing._id,
     });
 
   } catch (error) {

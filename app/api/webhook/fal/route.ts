@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { VideoTransformation } from '@/lib/models/VideoTransformation';
+import { VideoProcessing, type VideoProcessing as IVideoProcessing } from '@/lib/models/video';
 import connectDB from '@/lib/mongodb';
 import { uploadToCloudinary } from '@/lib/utils/video';
 import { Model } from 'mongoose';
-import { IVideoTransformation, FalWebhookPayload } from '@/lib/types/video';
+import { FalWebhookPayload } from '@/lib/types/video';
 
 const MAX_RETRIES = 3;
 
@@ -22,52 +22,72 @@ async function uploadToCloudinaryWithRetry(url: string, retries = 0): Promise<st
 }
 
 export async function POST(req: NextRequest) {
+  console.log('Webhook received:', {
+    headers: Object.fromEntries(req.headers.entries()),
+    url: req.url,
+  });
+
   try {
-    // Get transformation ID from query params
+    // Step 1: Validate webhook request
     const url = new URL(req.url);
-    const transformationId = url.searchParams.get('transformationId');
+    const processingId = url.searchParams.get('transformationId');
     
-    if (!transformationId) {
-      console.error('Missing transformationId in webhook request');
-      return NextResponse.json({ error: 'Missing transformationId' }, { status: 400 });
+    if (!processingId) {
+      console.error('Step 1 Failed: Missing processingId in webhook request');
+      return NextResponse.json({ error: 'Missing processingId' }, { status: 400 });
     }
+    console.log('Step 1 Complete: Valid webhook request received for processingId:', processingId);
 
+    // Step 2: Connect to database and get processing record
     await connectDB();
-
     const body = await req.json() as FalWebhookPayload;
-    console.log('Received webhook for transformation:', transformationId, 'Status:', body.status);
+    console.log('Step 2: Processing webhook payload:', {
+      processingId,
+      status: body.status,
+      hasVideo: !!body.payload?.video?.url,
+    });
 
-    const VideoTransformationModel = VideoTransformation as Model<IVideoTransformation>;
-    const transformation = await VideoTransformationModel.findById(transformationId);
-    if (!transformation) {
-      console.error('Transformation not found:', transformationId);
-      return NextResponse.json({ error: 'Transformation not found' }, { status: 404 });
+    const VideoProcessingModel = VideoProcessing as Model<IVideoProcessing>;
+    const processing = await VideoProcessingModel.findById(processingId);
+    if (!processing) {
+      console.error('Step 2 Failed: Processing record not found:', processingId);
+      return NextResponse.json({ error: 'Processing record not found' }, { status: 404 });
     }
+    console.log('Step 2 Complete: Found processing record');
 
     if (body.status === 'OK' && body.payload?.video?.url) {
       try {
-        // Upload to Cloudinary for permanent storage with retry logic
-        console.log('Uploading video to Cloudinary for transformation:', transformationId);
-        const cloudinaryUrl = await uploadToCloudinaryWithRetry(body.payload.video.url);
-        
-        // Update transformation record
-        await VideoTransformationModel.findByIdAndUpdate(transformationId, {
-          status: 'completed',
-          'transformedVideo.url': cloudinaryUrl,
-          completedAt: new Date(),
-          'parameters.seed': body.payload.seed,
+        // Step 3: Upload transformed video to Cloudinary
+        console.log('Step 3: Uploading transformed video to Cloudinary:', {
+          processingId,
+          sourceUrl: body.payload.video.url
         });
+        const cloudinaryUrl = await uploadToCloudinaryWithRetry(body.payload.video.url);
+        console.log('Step 3 Complete: Video uploaded to Cloudinary:', cloudinaryUrl);
+        
+        // Step 4: Update processing record
+        console.log('Step 4: Updating processing record with transformed video URL');
+        await VideoProcessingModel.findByIdAndUpdate(processingId, {
+          transformedVideoUrl: cloudinaryUrl,
+          status: 'completed',
+          processingCompletedAt: new Date(),
+          'transformationParameters.seed': body.payload.seed,
+        });
+        console.log('Step 4 Complete: Processing record updated');
 
-        console.log('Successfully processed transformation:', transformationId);
+        console.log('Webhook processing completed successfully:', processingId);
         return NextResponse.json({ status: 'success' });
       } catch (error) {
-        console.error('Failed to process transformation:', transformationId, error);
+        console.error('Failed to process webhook:', {
+          processingId,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
         
-        // Handle Cloudinary upload failure
-        await VideoTransformationModel.findByIdAndUpdate(transformationId, {
+        // Update record with error
+        await VideoProcessingModel.findByIdAndUpdate(processingId, {
           status: 'failed',
           error: error instanceof Error ? error.message : 'Failed to upload video to Cloudinary',
-          completedAt: new Date(),
+          processingCompletedAt: new Date(),
         });
 
         return NextResponse.json(
@@ -78,12 +98,16 @@ export async function POST(req: NextRequest) {
     } else {
       // Handle error case
       const errorMessage = body.error || body.payload_error || 'Failed to process video';
-      console.error('Transformation failed:', transformationId, errorMessage);
+      console.error('Transformation failed:', {
+        processingId,
+        error: errorMessage,
+        status: body.status,
+      });
       
-      await VideoTransformationModel.findByIdAndUpdate(transformationId, {
+      await VideoProcessingModel.findByIdAndUpdate(processingId, {
         status: 'failed',
         error: errorMessage,
-        completedAt: new Date(),
+        processingCompletedAt: new Date(),
       });
 
       return NextResponse.json(
