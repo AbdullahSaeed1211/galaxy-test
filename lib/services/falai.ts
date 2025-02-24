@@ -58,27 +58,27 @@ export async function queueVideoTransformation(params: TransformParams, transfor
       throw new Error('Missing required parameters: prompt and video_url are required');
     }
 
-    // Construct webhook URL properly
-    const webhookUrl = new URL('/api/webhook/fal', process.env.NEXT_PUBLIC_APP_URL);
-    webhookUrl.searchParams.set('transformationId', transformationId);
+    // Construct webhook URL properly, handling any trailing slashes
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, '') || ''; // Remove trailing slashes
+    const webhookUrl = `${baseUrl}/api/webhook/fal?transformationId=${transformationId}`;
 
     // Log the input parameters for debugging
     console.log('Attempting to queue video transformation with params:', {
       params,
       transformationId,
-      webhookUrl: webhookUrl.toString(),
+      webhookUrl,
     });
 
     // Submit to Fal AI queue with webhook pointing to our production endpoint
     const { request_id } = await fal.queue.submit("fal-ai/hunyuan-video/video-to-video", {
       input: params,
-      webhookUrl: webhookUrl.toString(),
+      webhookUrl,
     });
     
     console.log('Successfully queued video transformation:', { 
       transformationId, 
       requestId: request_id,
-      webhookUrl: webhookUrl.toString(),
+      webhookUrl,
     });
     
     return request_id;

@@ -4,6 +4,14 @@ import connectDB from '@/lib/mongodb';
 import { uploadToCloudinary } from '@/lib/utils/video';
 import { Model } from 'mongoose';
 import { FalWebhookPayload } from '@/lib/types/video';
+import { v2 as cloudinary } from 'cloudinary';
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 const MAX_RETRIES = 3;
 
