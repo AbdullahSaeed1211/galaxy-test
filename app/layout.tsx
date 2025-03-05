@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Galaxy AI - Video Transformation',
-  description: 'Transform your videos using AI',
+  title: 'Galaxy PDF - PDF Processing Tools',
+  description: 'Powerful tools to compress, convert, merge, edit, sign, and analyze your PDF documents',
 };
 
 export default function RootLayout({
@@ -34,9 +34,11 @@ export default function RootLayout({
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <SidebarProvider>
         <AppSidebar />
-         <Card className="m-2 w-full">
-            <SidebarTrigger className="m-2" />
-            {children}
+         <Card className="m-2 w-full min-h-screen overflow-hidden">
+            <SidebarTrigger className="m-4" />
+            <main className="p-2">
+              {children}
+            </main>
           </Card>
           <Toaster />
         </SidebarProvider>
